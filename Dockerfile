@@ -2,12 +2,10 @@ FROM ruby:3.3-slim AS builder
 
 WORKDIR /app
 
-COPY Gemfile Gemfile.lock ./
+COPY Gemfile ./
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential && \
-    gem update --system && \
     bundle config set --local without 'development test' && \
-    bundle lock --add-platform aarch64-linux && \
     bundle install --jobs 4 && \
     rm -rf /usr/local/bundle/cache/*.gem && \
     find /usr/local/bundle/gems -name "*.c" -o -name "*.o" | xargs rm -f
