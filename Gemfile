@@ -11,3 +11,4 @@ gem "sqlite-vec"
 gem "informers"
 
 gem "scaretable", "~> 0.1.0"
+gem "lru_redux"

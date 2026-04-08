@@ -2,6 +2,8 @@
 
 require "sinatra"
 require "json"
+require "digest"
+require "lru_redux"
 require "informers"
 require_relative "lib/db"
 
@@ -25,6 +27,10 @@ RERANK_FLOOR = 0.01
 
 # short descriptions are noisier — discount scores for descriptions under this length
 DESC_LEN_THRESHOLD = 100
+
+# LRU cache
+CACHE = LruRedux::TTL::ThreadSafeCache.new(256, 5 * 60)
+CACHE_TTL = 300
 
 # simple query expansion: add OR'd synonyms for common search intents
 EXPANSIONS = {
@@ -64,6 +70,14 @@ end
 
 get "/search.json" do
   content_type :json
+  cache_key = params.sort_by { |k, _| k }.map { |k, v| "#{k}=#{v}" }.join("&")
+  cached = CACHE[cache_key]
+  if cached
+    cache_control :public, max_age: CACHE_TTL
+    etag Digest::MD5.hexdigest(cached)
+    return cached
+  end
+
   t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   raw_q = params[:q]&.strip
   limit = params[:limit]&.to_i
@@ -132,7 +146,11 @@ get "/search.json" do
 
     ysws_counts = projects.each_with_object(Hash.new(0)) { |p, h| h[p["ysws_name"]] += 1 if p["ysws_name"] }
     ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
-    return { results: projects, query: "", ysws_counts: ysws_counts, ms: ms }.to_json
+    result = { results: projects, query: "", ysws_counts: ysws_counts, ms: ms }.to_json
+    CACHE[cache_key] = result
+    cache_control :public, max_age: CACHE_TTL
+    etag Digest::MD5.hexdigest(result)
+    return result
   end
 
   timings = {}
@@ -247,5 +265,9 @@ get "/search.json" do
   ysws_counts = ordered.each_with_object(Hash.new(0)) { |p, h| h[p["ysws_name"]] += 1 if p["ysws_name"] }
   ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
   timings[:total] = ms
-  { results: ordered, query: q, ysws_counts: ysws_counts, ms: ms, timings: timings }.to_json
+  result = { results: ordered, query: q, ysws_counts: ysws_counts, ms: ms, timings: timings }.to_json
+  CACHE[cache_key] = result
+  cache_control :public, max_age: CACHE_TTL
+  etag Digest::MD5.hexdigest(result)
+  result
 end

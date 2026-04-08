@@ -78,7 +78,5 @@ basically everything. some specific things:
 - there's no learning-to-rank. the RRF weights and reranker floor are hand-tuned vibes. you could train an actual model on click data if you had any.
 - embedding model is run in-process in ruby via ONNX (informers gem). it works but it's not fast. a dedicated embedding service or precomputed index would be better.
 - the reranker candidate pool size (37) was picked by "what feels fast enough." there's probably an optimal number and this isn't it.
-- no caching. every search re-embeds the query and re-runs the whole pipeline.
-- the frontend is one ERB file and a CSS file. it's fine. it's a search box.
 
 if you want to make this better, please do. the bones are here. the concept is the part that matters.

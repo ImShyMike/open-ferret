@@ -18,6 +18,7 @@ GEM
       tokenizers (>= 0.5.3)
     json (2.19.0)
     logger (1.7.0)
+    lru_redux (1.1.0)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
     net-http (0.9.1)
@@ -75,6 +76,7 @@ PLATFORMS
 DEPENDENCIES
   csv
   informers
+  lru_redux
   puma
   rackup
   scaretable (~> 0.1.0)
