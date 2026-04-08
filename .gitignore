@@ -1,4 +1,4 @@
-data/
+ferret.db
 .bundle/
 .env
 .idea/
