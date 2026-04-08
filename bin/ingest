@@ -8,7 +8,7 @@ require_relative "../lib/db"
 
 API_BASE = "https://ships.hackclub.com/api/v1/ysws_entries"
 BATCH = 500
-MIN_CLEAN_LEN = 50
+MIN_CLEAN_LEN = 30
 
 fresh = !File.exist?(DB::DB_PATH) | ARGV.include?("--full")
 url = fresh ? "#{API_BASE}?all=true" : API_BASE
