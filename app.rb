@@ -29,6 +29,7 @@ end
 set :port, 4567
 set :bind, "0.0.0.0"
 set :public_folder, File.join(__dir__, "public")
+set :host_authorization, permitted_hosts: ENV["APP_HOST"] ? [ENV["APP_HOST"]] : []
 
 EMBED_MODEL = Informers.pipeline("embedding", "sentence-transformers/all-mpnet-base-v2")
 RERANKER = Informers.pipeline("reranking", "cross-encoder/ms-marco-MiniLM-L-6-v2")
