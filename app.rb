@@ -101,7 +101,7 @@ get "/search.json" do
   t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   raw_q = params[:q]&.strip
   limit = params[:limit]&.to_i
-  limit = limit&.positive? ? limit.clamp(1, 500) : 20
+  limit = limit&.positive? ? limit.clamp(1, 1000) : 20
 
   # parse -word exclusions (only at word boundary, so "orpheus-engine" is safe)
   exclude_terms = []
