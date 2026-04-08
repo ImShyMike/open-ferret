@@ -7,6 +7,25 @@ require "lru_redux"
 require "informers"
 require_relative "lib/db"
 
+if ENV["OTEL_EXPORTER_OTLP_ENDPOINT"]
+  require "opentelemetry/sdk"
+  require "opentelemetry/exporter/otlp"
+  require "opentelemetry/instrumentation/sinatra"
+
+  OpenTelemetry::SDK.configure do |c|
+    c.service_name = "open-ferret"
+    c.use "OpenTelemetry::Instrumentation::Sinatra"
+  end
+
+  TRACER = OpenTelemetry.tracer_provider.tracer("open-ferret")
+else
+  TRACER = Module.new do
+    def self.in_span(*, **)
+      yield
+    end
+  end
+end
+
 set :port, 4567
 set :bind, "0.0.0.0"
 set :public_folder, File.join(__dir__, "public")
@@ -162,20 +181,24 @@ get "/search.json" do
   vec_results = []
   if use_vec
     t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    embedding = EMBED_MODEL.(q)
+    embedding = TRACER.in_span("embed") do
+      EMBED_MODEL.(q)
+    end
     timings[:embed] = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t1) * 1000).round
 
     t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     blob = embedding.pack("e*")
-    vec_results = db.execute(<<~SQL, [blob, pool])
-      SELECT v.record_id, vp.distance
-      FROM (
-        SELECT rowid, distance
-        FROM vec_projects
-        WHERE embedding MATCH ? AND k = ?
-      ) vp
-      JOIN vec_lookup v ON v.rowid = vp.rowid
-    SQL
+    TRACER.in_span("vec_knn", attributes: { "k" => pool }) do
+      vec_results = db.execute(<<~SQL, [blob, pool])
+        SELECT v.record_id, vp.distance
+        FROM (
+          SELECT rowid, distance
+          FROM vec_projects
+          WHERE embedding MATCH ? AND k = ?
+        ) vp
+        JOIN vec_lookup v ON v.rowid = vp.rowid
+      SQL
+    end
     timings[:vec_knn] = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t1) * 1000).round
   end
 
@@ -184,17 +207,19 @@ get "/search.json" do
   if use_fts
     t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     fts_query = expand_fts_query(q)
-    fts_results = begin
-      db.execute(<<~SQL, [fts_query, pool])
-        SELECT v.record_id, fts.rank
-        FROM fts_projects fts
-        JOIN vec_lookup v ON v.rowid = fts.rowid
-        WHERE fts_projects MATCH ?
-        ORDER BY fts.rank
-        LIMIT ?
-      SQL
-    rescue SQLite3::SQLException
-      []
+    fts_results = TRACER.in_span("fts") do
+      begin
+        db.execute(<<~SQL, [fts_query, pool])
+          SELECT v.record_id, fts.rank
+          FROM fts_projects fts
+          JOIN vec_lookup v ON v.rowid = fts.rowid
+          WHERE fts_projects MATCH ?
+          ORDER BY fts.rank
+          LIMIT ?
+        SQL
+      rescue SQLite3::SQLException
+        []
+      end
     end
     timings[:fts] = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t1) * 1000).round
   end
@@ -233,7 +258,9 @@ get "/search.json" do
   # by_id = candidates.each_with_object({}) { |p, h| h[p["record_id"]] = p }
   docs = candidates.map { |c| c["description_clean"][0, 256] }
 
-  reranked = RERANKER.(q, docs)
+  reranked = TRACER.in_span("rerank", attributes: { "candidates" => docs.length }) do
+    RERANKER.(q, docs)
+  end
   timings[:rerank] = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t1) * 1000).round
 
   # apply description length boost — discount short descriptions
@@ -265,6 +292,11 @@ get "/search.json" do
   ysws_counts = ordered.each_with_object(Hash.new(0)) { |p, h| h[p["ysws_name"]] += 1 if p["ysws_name"] }
   ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
   timings[:total] = ms
+  span = OpenTelemetry::Trace.current_span
+  span.set_attribute("search.query", q)
+  span.set_attribute("search.results_count", ordered.length)
+  span.set_attribute("search.ms", ms)
+
   result = { results: ordered, query: q, ysws_counts: ysws_counts, ms: ms, timings: timings }.to_json
   CACHE[cache_key] = result
   cache_control :public, max_age: CACHE_TTL
