@@ -3,7 +3,6 @@ GEM
   specs:
     base64 (0.3.0)
     bigdecimal (4.1.1)
-    csv (3.3.5)
     ffi (1.17.4-arm64-darwin)
     ffi (1.17.4-x86_64-darwin)
     ffi (1.17.4-x86_64-linux-gnu)
@@ -106,7 +105,6 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
-  csv
   informers
   lru_redux
   opentelemetry-exporter-otlp

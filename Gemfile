@@ -2,7 +2,6 @@
 
 source "https://rubygems.org"
 
-gem "csv"
 gem "informers"
 gem "lru_redux"
 gem "opentelemetry-exporter-otlp"
