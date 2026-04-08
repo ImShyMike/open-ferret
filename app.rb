@@ -293,10 +293,12 @@ get "/search.json" do
   ysws_counts = ordered.each_with_object(Hash.new(0)) { |p, h| h[p["ysws_name"]] += 1 if p["ysws_name"] }
   ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000).round
   timings[:total] = ms
-  span = OpenTelemetry::Trace.current_span
-  span.set_attribute("search.query", q)
-  span.set_attribute("search.results_count", ordered.length)
-  span.set_attribute("search.ms", ms)
+  if defined?(OpenTelemetry)
+    span = OpenTelemetry::Trace.current_span
+    span.set_attribute("search.query", q)
+    span.set_attribute("search.results_count", ordered.length)
+    span.set_attribute("search.ms", ms)
+  end
 
   result = { results: ordered, query: q, ysws_counts: ysws_counts, ms: ms, timings: timings }.to_json
   CACHE[cache_key] = result
