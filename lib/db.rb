@@ -32,9 +32,13 @@ module DB
         hours_spent REAL,
         name TEXT,
         country TEXT,
-        city TEXT,
-        age_when_approved INTEGER,
         ysws_name TEXT,
+        github_username TEXT,
+        screenshot_url TEXT,
+        github_stars INTEGER DEFAULT 0,
+        approved_at INTEGER,
+        archived_demo TEXT,
+        archived_repo TEXT,
         updated_at TEXT DEFAULT (datetime('now'))
       )
     SQL
@@ -66,9 +70,9 @@ module DB
   # strip markdown, urls, extra whitespace
   def self.clean(text)
     return nil if text.nil?
-    text = text.gsub(/https?:\/\/\S+/, "")
+
+    text = text.gsub(%r{https?://\S+}, "")
     text = text.gsub(/[#*_`~\[\]()>|]/, "")
-    text = text.gsub(/\s+/, " ").strip
-    text
+    text.gsub(/\s+/, " ").strip
   end
 end

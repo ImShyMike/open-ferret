@@ -1,13 +1,10 @@
 #!/bin/sh
-# download fresh CSV, ingest into sqlite, vectorize new rows
+# download fresh data, ingest into sqlite, vectorize new rows
 set -e
 
 cd "$(dirname "$0")/.."
 
-echo "[refresh] downloading csv..."
-bundle exec ruby bin/download
-
-echo "[refresh] ingesting..."
+echo "[refresh] ingesting from the ships API..."
 bundle exec ruby bin/ingest
 
 echo "[refresh] vectorizing..."

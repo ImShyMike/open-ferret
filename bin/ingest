@@ -1,21 +1,33 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "csv"
+require "json"
+require "net/http"
+require "uri"
 require_relative "../lib/db"
 
-csv_path = ARGV[0] || File.expand_path("../../data/unified.csv", __FILE__)
-abort "CSV not found: #{csv_path}" unless File.exist?(csv_path)
-
-db = DB.connection
-EN_DASH = "\u2013"
+API_BASE = "https://ships.hackclub.com/api/v1/ysws_entries"
 BATCH = 500
 MIN_CLEAN_LEN = 50
 
+fresh = !File.exist?(DB::DB_PATH) | ARGV.include?("--full")
+url = fresh ? "#{API_BASE}?all=true" : API_BASE
+
+warn "fetching #{url}#{fresh ? ' (full)' : ' (incremental)'}..."
+response = Net::HTTP.get_response(URI(url))
+abort "HTTP #{response.code}: #{response.message}" unless response.is_a?(Net::HTTPSuccess)
+
+entries = JSON.parse(response.body)
+warn "fetched #{entries.size} entries"
+
+db = DB.connection
+
 upsert_sql = <<~SQL
   INSERT INTO projects (record_id, description, description_clean, playable_url, code_url,
-                        hours_spent, name, country, city, age_when_approved, ysws_name, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                        hours_spent, name, country, ysws_name, github_username,
+                        screenshot_url, github_stars, approved_at, archived_demo,
+                        archived_repo, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   ON CONFLICT(record_id) DO UPDATE SET
     description = excluded.description,
     description_clean = CASE WHEN excluded.description_clean != projects.description_clean
@@ -25,9 +37,13 @@ upsert_sql = <<~SQL
     hours_spent = excluded.hours_spent,
     name = excluded.name,
     country = excluded.country,
-    city = excluded.city,
-    age_when_approved = excluded.age_when_approved,
     ysws_name = excluded.ysws_name,
+    github_username = excluded.github_username,
+    screenshot_url = excluded.screenshot_url,
+    github_stars = excluded.github_stars,
+    approved_at = excluded.approved_at,
+    archived_demo = excluded.archived_demo,
+    archived_repo = excluded.archived_repo,
     updated_at = CASE WHEN excluded.description_clean != projects.description_clean
                       THEN datetime('now') ELSE projects.updated_at END
 SQL
@@ -37,47 +53,57 @@ skipped = 0
 ingested = 0
 batch = []
 
-flush = -> {
+flush = lambda {
   return if batch.empty?
+
   db.transaction do
     batch.each { |row| db.execute(upsert_sql, row) }
   end
   batch.clear
 }
 
-CSV.foreach(csv_path, headers: true, liberal_parsing: true) do |row|
+entries.each do |entry|
   total += 1
 
-  record_id = row["Record ID"]
+  record_id = entry["id"]
   next (skipped += 1) unless record_id && !record_id.empty?
 
-  description = row["Description"]
+  description = entry["description"]
   clean = DB.clean(description)
   next (skipped += 1) if clean.nil? || clean.length < MIN_CLEAN_LEN
 
-  id_field = row["ID"] || ""
-  parts = id_field.split(EN_DASH, 2)
-  ysws_name = parts[0]&.strip
-  name = parts[1]&.strip
+  nullify = ->(v) { v == "null" ? nil : v }
 
-  hours = row["Hours Spent"]&.to_f
-  age = row["Age When Approved"]&.to_i
+  hours = entry["hours"]
+  hours = hours.is_a?(Numeric) ? hours.to_f : nil
+  name = nullify.(entry["display_name"])
+  country = nullify.(entry["country"])
+  code_url = nullify.(entry["code_url"])
+  playable_url = nullify.(entry["demo_url"])
+  ysws_name = entry["ysws"]
+  github_username = nullify.(entry["github_username"])
+  screenshot_url = nullify.(entry["screenshot_url"])
+  github_stars = entry["github_stars"] || 0
+  approved_at = entry["approved_at"]
+  approved_at = approved_at.is_a?(Numeric) ? approved_at : nil
+  archived_demo = nullify.(entry["archived_demo"])
+  archived_repo = nullify.(entry["archived_repo"])
 
-  batch << [record_id, description, clean, row["Playable URL"], row["Code URL"],
-            hours, name, row["Country"], row["City"], age == 0 ? nil : age, ysws_name]
+  batch << [record_id, description, clean, playable_url, code_url,
+            hours, name, country, ysws_name, github_username,
+            screenshot_url, github_stars, approved_at, archived_demo, archived_repo]
 
   if batch.size >= BATCH
     ingested += batch.size
     flush.call
   end
 
-  if total % 5000 == 0
-    $stderr.print "\r  #{total} rows scanned, #{ingested + batch.size} ingested, #{skipped} skipped"
+  if (total % 5000).zero?
+    warn "\r  #{total} entries scanned, #{ingested + batch.size} ingested, #{skipped} skipped"
   end
 end
 
-# count before final flush
 ingested += batch.size
 flush.call
 
-$stderr.puts "\r  done: #{total} rows scanned, #{ingested} ingested, #{skipped} skipped"
+warn "\r  done: #{total} entries scanned, #{ingested} ingested, #{skipped} skipped"

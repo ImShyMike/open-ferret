@@ -35,15 +35,15 @@ EXPANSIONS = {
   "web" => "web website webapp",
   "ai" => "ai artificial intelligence ml machine learning",
   "3d" => "3d three dimensional",
-  "chat" => "chat messaging conversation",
+  "chat" => "chat messaging conversation"
 }.freeze
 
-def expand_fts_query(q)
-  words = q.downcase.split(/\s+/)
+def expand_fts_query(query)
+  words = query.downcase.split(/\s+/)
   parts = words.map do |w|
     expanded = EXPANSIONS[w]
     if expanded
-      "(" + expanded.split.map { |s| %("#{s}") }.join(" OR ") + ")"
+      "(#{expanded.split.map { |s| %("#{s}") }.join(' OR ')})"
     else
       %("#{w}")
     end
@@ -66,7 +66,8 @@ get "/search.json" do
   content_type :json
   t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   raw_q = params[:q]&.strip
-  limit = (params[:limit] || 20).to_i.clamp(1, 100)
+  limit = params[:limit]&.to_i
+  limit = limit&.positive? ? limit.clamp(1, 100) : 20
 
   # parse -word exclusions (only at word boundary, so "orpheus-engine" is safe)
   exclude_terms = []
@@ -115,7 +116,8 @@ get "/search.json" do
     fetch_limit = exclude_terms.empty? ? limit : limit * 3
     projects = db.execute(<<~SQL, filter_params + [fetch_limit])
       SELECT record_id, description_clean, playable_url, code_url,
-             hours_spent, name, country, city, age_when_approved, ysws_name
+             hours_spent, name, country, ysws_name, github_username,
+             github_stars, approved_at, archived_demo, archived_repo
       FROM projects
       #{filter_where}
       ORDER BY hours_spent DESC
@@ -200,7 +202,8 @@ get "/search.json" do
 
   candidates = db.execute(<<~SQL, candidate_ids + filter_params)
     SELECT record_id, description_clean, playable_url, code_url,
-           hours_spent, name, country, city, age_when_approved, ysws_name
+           hours_spent, name, country, ysws_name, github_username,
+           github_stars, approved_at, archived_demo, archived_repo
     FROM projects
     WHERE #{id_where}#{extra}
   SQL
@@ -209,7 +212,7 @@ get "/search.json" do
 
   # --- cross-encoder rerank ---
   t1 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  by_id = candidates.each_with_object({}) { |p, h| h[p["record_id"]] = p }
+  # by_id = candidates.each_with_object({}) { |p, h| h[p["record_id"]] = p }
   docs = candidates.map { |c| c["description_clean"][0, 256] }
 
   reranked = RERANKER.(q, docs)
@@ -225,8 +228,8 @@ get "/search.json" do
 
   floor = params[:show_worse] == "1" ? 0 : RERANK_FLOOR
   scored = reranked
-    .select { |r| r[:score] > floor }
-    .sort_by { |r| -r[:score] }
+           .select { |r| r[:score] > floor }
+           .sort_by { |r| -r[:score] }
 
   ordered = scored.map do |r|
     proj = candidates[r[:doc_id]].dup

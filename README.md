@@ -1,6 +1,6 @@
-# ferret
+# (open) ferret
 
-semantic search for [Hack Club](https://hackclub.com) Unified YSWS DB projects. it pulls project data from airtable, embeds descriptions into vectors, and lets you search them with a ranking pipeline that's almost good enough?
+semantic search for [Hack Club](https://hackclub.com) Unified YSWS DB projects. it pulls project data from the ships API, embeds descriptions into vectors, and lets you search them with a ranking pipeline that's almost good enough?
 
 this is a janky first pass. it works, it's useful, and someone can and should do way better. the concept needs to exist — "what if you could actually find things in the YSWS project database" — and this is the minimum viable execution of that concept.
 
@@ -8,11 +8,10 @@ this is a janky first pass. it works, it's useful, and someone can and should do
 
 data flows through three steps:
 
-1. **download** — pulls a CSV export from airtable via [scaretable](https://github.com/hackclub/scaretable)
-2. **ingest** — cleans descriptions (strips markdown, urls, whitespace) and upserts into sqlite
-3. **vectorize** — embeds descriptions with [all-mpnet-base-v2](https://huggingface.co/sentence-transformers/all-mpnet-base-v2) and indexes them in [sqlite-vec](https://github.com/asg017/sqlite-vec), plus builds an FTS5 full-text index with porter stemming
+1. **ingest** — pulls data from the [ships API](https://github.com/hackclub/ships), cleans descriptions (strips markdown, urls, whitespace) and upserts into sqlite
+2. **vectorize** — embeds descriptions with [all-mpnet-base-v2](https://huggingface.co/sentence-transformers/all-mpnet-base-v2) and indexes them in [sqlite-vec](https://github.com/asg017/sqlite-vec), plus builds an FTS5 full-text index with porter stemming
 
-a cron job runs all three nightly at 3am UTC.
+a cron job runs all three nightly at 12am UTC.
 
 ## the ranking algorithm
 
@@ -45,19 +44,18 @@ a few heuristics on top:
 
 ## what's here
 
-```
+```text
 app.rb          sinatra app, search endpoint, ranking logic
 lib/db.rb       sqlite schema, connection setup, text cleaning
-bin/download    pull CSV from airtable
-bin/ingest      parse CSV into sqlite
+bin/ingest      fetch from ships API, clean, upsert into sqlite
 bin/vectorize   embed descriptions, build vec + fts indexes
-bin/refresh     run all three in sequence
+bin/refresh     run all two in sequence
 bin/entrypoint  docker entrypoint (starts cron + web server)
 ```
 
 ## running it
 
-you need ruby 3.3+ and the env vars `SCARETABLE_BASE_ID` and `SCARETABLE_SHARE_ID` pointing at your airtable share.
+you need ruby 3.3+
 
 ```sh
 bundle install
@@ -68,8 +66,8 @@ ruby app.rb         # http://localhost:4567
 or with docker:
 
 ```sh
-docker build -t ferret .
-docker run -p 4567:4567 --env-file .env ferret
+docker build -t open-ferret .
+docker run -p 4567:4567 open-ferret
 ```
 
 ## what should be better

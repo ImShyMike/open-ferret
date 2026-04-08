@@ -271,6 +271,14 @@ h1 {
   color: #999;
 }
 
+.stars {
+  color: #999;
+}
+
+.approved {
+  color: #999;
+}
+
 .score {
   font-size: 0.65rem;
   color: #bbb;

@@ -50,7 +50,7 @@ rows.each_slice(BATCH_SIZE).with_index do |batch, i|
 
   done = (i + 1) * BATCH_SIZE
   done = rows.size if done > rows.size
-  $stderr.print "\r  embedded #{done}/#{rows.size}"
+  warn "\r  embedded #{done}/#{rows.size}"
 end
 
-$stderr.puts "\r  done: embedded #{rows.size} rows"
+warn "\r  done: embedded #{rows.size} rows"

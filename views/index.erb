@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ferret</title>
+  <title>(open) ferret</title>
   <link rel="stylesheet" href="/style.css">
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
 </head>
 <body>
   <header class="usn">
-    <h1>≽ܫ≼ ferret</h1>
+    <h1>≽ܫ≼ (open) ferret</h1>
     <p class="subtitle">semantic search over hack club projects</p>
   </header>
 
@@ -34,7 +34,7 @@
       <div class="filter-row">
         <input class="filter" type="text" name="country" placeholder="country" onchange="retrigger()">
         <input class="filter" type="number" name="min_hours" placeholder="min hours" min="0" step="1" onchange="retrigger()">
-        <input class="filter" type="number" name="limit" value="20" min="1" max="100" onchange="retrigger()">
+        <input class="filter" type="number" name="limit" placeholder="limit" value="20" min="1" max="100" onchange="retrigger()">
       </div>
       <div class="toggle-row">
         <label class="toggle"><input class="toggle-cb" type="checkbox" data-filter="exclude_zero_hours" checked><span>exclude 0h</span></label>
@@ -196,24 +196,45 @@
       htmx.trigger(document.querySelector('input[name="q"]'), 'search');
     }
 
+    function ghUser(p) {
+      let gh = p.github_username;
+      if (!gh && p.code_url) {
+        const m = p.code_url.match(/github\.com\/([^\/]+)/i);
+        if (m) gh = m[1];
+      }
+      return gh;
+    }
+
     function renderCard(p) {
       const desc = (p.description_clean || '').slice(0, 200);
-      const meta = [p.name, p.age_when_approved ? `age ${p.age_when_approved}` : null,
-                    [p.city, p.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+      const gh = ghUser(p);
+      let who = '';
+      if (gh) {
+        who = `<a class="tag-name" href="https://github.com/${esc(gh)}" target="_blank" rel="noopener">${esc(gh)}</a>`;
+        if (p.name) who += ` (${esc(p.name)})`;
+      } else if (p.name) {
+        who = esc(p.name);
+      }
+      const meta = [who, esc(p.country)].filter(Boolean).join(' · ');
       const links = [];
       if (p.playable_url) links.push(`<a href="${schemed(p.playable_url)}" target="_blank" rel="noopener">play</a>`);
       if (p.code_url) links.push(`<a href="${schemed(p.code_url)}" target="_blank" rel="noopener">code</a>`);
-      if (p.record_id) links.push(`<a href="https://airtable.com/app3A5kJwYqxMLOgh/tblzWWGUYHVH7Zyqf/${esc(p.record_id)}" target="_blank" rel="noopener">airtable</a>`);
+      //if (p.archived_demo) links.push(`<a href="${schemed(p.archived_demo)}" target="_blank" rel="noopener">archived demo</a>`);
+      //if (p.archived_repo) links.push(`<a href="${schemed(p.archived_repo)}" target="_blank" rel="noopener">archived repo</a>`);
       const hours = p.hours_spent ? `${p.hours_spent}h` : '';
+      const approved = p.approved_at ? new Date(p.approved_at * 1000).toLocaleDateString() : '';
       const ysws = p.ysws_name ? `<span class="tag">${esc(p.ysws_name)}</span>` : '';
+      const stars = p.github_stars ? `<span class="stars">★${p.github_stars}</span>` : '';
       const score = p.score != null ? `<span class="score">${p.score.toFixed(2)}</span>` : '';
 
       return `<article class="card">
         <p class="desc">${esc(desc)}${desc.length >= 200 ? '…' : ''}</p>
         <div class="card-meta">
-          <span class="meta">${esc(meta)}</span>
+          <span class="meta">${meta}</span>
           ${ysws}
           ${hours ? `<span class="hours">${hours}</span>` : ''}
+          ${approved ? `<span class="approved">${approved}</span>` : ''}
+          ${stars}
           ${score}
           <span class="links">${links.join(' ')}</span>
         </div>
