@@ -1,4 +1,4 @@
-FROM ruby:3.4-slim AS builder
+FROM ruby:4-slim AS builder
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN apt-get update && \
     rm -rf /usr/local/bundle/cache/*.gem && \
     find /usr/local/bundle/gems -name "*.c" -o -name "*.o" | xargs rm -f
 
-FROM ruby:3.4-slim
+FROM ruby:4-slim
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends libgomp1 && \

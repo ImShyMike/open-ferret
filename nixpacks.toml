@@ -1,8 +1,0 @@
-[phases.setup]
-aptPkgs = ["libgomp1"]
-
-[phases.install]
-cmds = ["bundle install --jobs 4"]
-
-[start]
-cmd = "bundle exec ruby app.rb"
