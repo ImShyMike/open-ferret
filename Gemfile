@@ -3,12 +3,10 @@
 source "https://rubygems.org"
 
 gem "csv"
-gem "sinatra"
-gem "rackup"
+gem "informers"
+gem "lru_redux"
 gem "puma"
+gem "rackup"
+gem "sinatra"
 gem "sqlite3"
 gem "sqlite-vec"
-gem "informers"
-
-gem "scaretable", "~> 0.1.0"
-gem "lru_redux"

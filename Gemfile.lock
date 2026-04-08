@@ -3,12 +3,6 @@ GEM
   specs:
     base64 (0.3.0)
     csv (3.3.5)
-    faraday (2.14.1)
-      faraday-net_http (>= 2.0, < 3.5)
-      json
-      logger
-    faraday-net_http (3.4.2)
-      net-http (~> 0.5)
     ffi (1.17.3-arm64-darwin)
     ffi (1.17.3-x86_64-darwin)
     ffi (1.17.3-x86_64-linux-gnu)
@@ -16,13 +10,10 @@ GEM
     informers (1.2.1)
       onnxruntime (>= 0.9)
       tokenizers (>= 0.5.3)
-    json (2.19.0)
     logger (1.7.0)
     lru_redux (1.1.0)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
-    net-http (0.9.1)
-      uri (>= 0.11.1)
     nio4r (2.7.5)
     onnxruntime (0.11.0-arm64-darwin)
       ffi
@@ -43,8 +34,6 @@ GEM
     rackup (2.3.1)
       rack (>= 3)
     ruby2_keywords (0.0.5)
-    scaretable (0.1.0)
-      faraday (~> 2.13)
     sinatra (4.2.1)
       logger (>= 1.6.0)
       mustermann (~> 3.0)
@@ -64,7 +53,6 @@ GEM
     tokenizers (0.6.3-x86_64-darwin)
     tokenizers (0.6.3-x86_64-linux)
     tokenizers (0.6.3-x86_64-linux-musl)
-    uri (1.1.1)
 
 PLATFORMS
   arm64-darwin
@@ -79,7 +67,6 @@ DEPENDENCIES
   lru_redux
   puma
   rackup
-  scaretable (~> 0.1.0)
   sinatra
   sqlite-vec
   sqlite3
