@@ -4,12 +4,20 @@ GEM
     base64 (0.3.0)
     bigdecimal (4.1.1)
     csv (3.3.5)
-    ffi (1.17.3)
+    ffi (1.17.3-arm64-darwin)
+    ffi (1.17.3-x86_64-darwin)
     ffi (1.17.3-x86_64-linux-gnu)
-    google-protobuf (4.34.1)
+    ffi (1.17.3-x86_64-linux-musl)
+    google-protobuf (4.34.1-arm64-darwin)
+      bigdecimal
+      rake (~> 13.3)
+    google-protobuf (4.34.1-x86_64-darwin)
       bigdecimal
       rake (~> 13.3)
     google-protobuf (4.34.1-x86_64-linux-gnu)
+      bigdecimal
+      rake (~> 13.3)
+    google-protobuf (4.34.1-x86_64-linux-musl)
       bigdecimal
       rake (~> 13.3)
     googleapis-common-protos-types (1.22.0)
@@ -17,14 +25,14 @@ GEM
     informers (1.2.1)
       onnxruntime (>= 0.9)
       tokenizers (>= 0.5.3)
-    json (2.19.3)
     logger (1.7.0)
     lru_redux (1.1.0)
-    mini_portile2 (2.8.9)
     mustermann (3.0.4)
       ruby2_keywords (~> 0.0.1)
     nio4r (2.7.5)
-    onnxruntime (0.11.0)
+    onnxruntime (0.11.0-arm64-darwin)
+      ffi
+    onnxruntime (0.11.0-x86_64-darwin)
       ffi
     onnxruntime (0.11.0-x86_64-linux)
       ffi
@@ -70,10 +78,6 @@ GEM
     rackup (2.3.1)
       rack (>= 3)
     rake (13.3.1)
-    rake-compiler-dock (1.11.0)
-    rb_sys (0.9.126)
-      json (>= 2)
-      rake-compiler-dock (= 1.11.0)
     ruby2_keywords (0.0.5)
     sinatra (4.2.1)
       logger (>= 1.6.0)
@@ -82,19 +86,25 @@ GEM
       rack-protection (= 4.2.1)
       rack-session (>= 2.0.0, < 3)
       tilt (~> 2.0)
-    sqlite-vec (0.1.6-arm64-linux)
+    sqlite-vec (0.1.6-arm64-darwin)
+    sqlite-vec (0.1.6-x86_64-darwin)
     sqlite-vec (0.1.6-x86_64-linux)
-    sqlite3 (2.9.1)
-      mini_portile2 (~> 2.8.0)
+    sqlite3 (2.9.1-arm64-darwin)
+    sqlite3 (2.9.1-x86_64-darwin)
     sqlite3 (2.9.1-x86_64-linux-gnu)
+    sqlite3 (2.9.1-x86_64-linux-musl)
     tilt (2.7.0)
-    tokenizers (0.6.3)
-      rb_sys
+    tokenizers (0.6.3-arm64-darwin)
+    tokenizers (0.6.3-x86_64-darwin)
     tokenizers (0.6.3-x86_64-linux)
+    tokenizers (0.6.3-x86_64-linux-musl)
 
 PLATFORMS
-  arm64-linux
+  arm64-darwin
+  x86_64-darwin
   x86_64-linux
+  x86_64-linux-gnu
+  x86_64-linux-musl
 
 DEPENDENCIES
   csv
