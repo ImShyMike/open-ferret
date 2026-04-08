@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["libgomp"]
+aptPkgs = ["libgomp1"]
 
 [phases.install]
 cmds = ["bundle install --jobs 4"]
